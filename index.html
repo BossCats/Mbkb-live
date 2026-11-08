@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MBKB Live</title>
+<meta name="description" content="Live college basketball total and spread projections">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MBKB Live">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#f4f5f7;--card:#ffffff;--ink:#14171c;--muted:#6b7280;--line:#e3e6eb;
+  --accent:#e8681a;--accent-ink:#ffffff;--live:#d92d20;--good:#12805c;--bad:#b42318;--chip:#eef0f3;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1115;--card:#181b21;--ink:#eef0f3;--muted:#9aa3af;--line:#272b33;
+  --accent:#f2843a;--accent-ink:#14171c;--live:#ff5a4e;--good:#3ccf91;--bad:#ff7a6e;--chip:#23272e;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 16px)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 16px 8px;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:8px}
+.top h1{font-size:19px;margin:0;flex:1;letter-spacing:-.2px}
+.top h1 span{color:var(--accent)}
+button{font:inherit;color:inherit;background:var(--chip);border:0;border-radius:10px;padding:7px 11px;cursor:pointer}
+button:active{opacity:.7}
+.day{display:flex;align-items:center;gap:6px;margin-top:8px}
+.day .lbl{flex:1;text-align:center;font-weight:600}
+.filters{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
+.filters button{white-space:nowrap;font-size:14px;padding:6px 12px}
+.filters button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+input[type=search],input[type=number],input[type=text]{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%}
+.search{margin-top:8px}
+.status{font-size:12px;color:var(--muted);padding:6px 16px}
+.banner{margin:8px 16px;padding:10px 12px;border-radius:10px;background:#fde8e6;color:#7a1a12;font-size:14px}
+@media (prefers-color-scheme:dark){.banner{background:#3a1d1a;color:#ffc9c2}}
+main{padding:0 12px;display:grid;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.row{display:flex;align-items:center;gap:8px}
+.teams{flex:1;min-width:0}
+.team{display:flex;align-items:center;gap:6px;font-size:16px}
+.team .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team .rk{font-size:11px;color:var(--muted);font-weight:600}
+.team .sc{font-variant-numeric:tabular-nums;font-weight:700;font-size:18px;min-width:2.2em;text-align:right}
+.team.lead .nm{font-weight:650}
+.clock{font-size:12px;color:var(--muted);text-align:right;min-width:74px}
+.clock.live{color:var(--live);font-weight:700}
+.star{background:none;padding:2px 4px;font-size:18px;color:var(--muted)}
+.star.on{color:var(--accent)}
+.proj{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.v small{font-size:12px;font-weight:500;color:var(--muted)}
+.over{color:var(--good)} .under{color:var(--bad)}
+.empty{text-align:center;color:var(--muted);padding:40px 16px}
+dialog{border:0;border-radius:16px;padding:0;width:min(440px,calc(100% - 24px));background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.sheet{padding:16px}
+.sheet h2{font-size:17px;margin:0 0 4px}
+.sheet .sub{font-size:13px;color:var(--muted);margin-bottom:12px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fields label{font-size:12px;color:var(--muted);display:grid;gap:4px}
+.fields .wide{grid-column:1/-1}
+.cmp{margin:12px 0;font-size:14px;display:grid;gap:4px}
+.cmp div{display:flex;justify-content:space-between;gap:8px}
+.cmp b{font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.actions .pri{background:var(--accent);color:var(--accent-ink);font-weight:600}
+footer{font-size:12px;color:var(--muted);text-align:center;padding:16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>MBKB <span>Live</span></h1>
+    <button id="refresh" aria-label="Refresh">Refresh</button>
+  </div>
+  <div class="day">
+    <button id="prev" aria-label="Previous day">&#8249;</button>
+    <div class="lbl" id="dayLbl"></div>
+    <button id="next" aria-label="Next day">&#8250;</button>
+  </div>
+  <div class="filters" id="filters">
+    <button data-f="all" class="on">All</button>
+    <button data-f="live">Live</button>
+    <button data-f="pre">Upcoming</button>
+    <button data-f="post">Final</button>
+    <button data-f="star">&#9733; Mine</button>
+  </div>
+  <input class="search" id="search" type="search" placeholder="Find a team" autocomplete="off">
+</header>
+<div id="banner" class="banner" hidden></div>
+<div class="status" id="status">Loading…</div>
+<main id="list"></main>
+<footer id="foot"></footer>
+
+<dialog id="dlg"><form method="dialog" class="sheet" id="sheet"></form></dialog>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
