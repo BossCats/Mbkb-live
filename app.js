@@ -6,11 +6,20 @@ var SRC = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college
 var POLL_MS = 30000;
 
 var P = null, games = [], filter = 'all', query = '', day = new Date(), timer = null, lastOk = null, loading = false;
-var store = loadStore();
+var store = loadStore(); pruneStore();
 
 function $(id) { return document.getElementById(id); }
 function loadStore() {
   try { return JSON.parse(localStorage.getItem('mbkb.v1')) || { lines: {}, star: {} }; } catch (e) { return { lines: {}, star: {} }; }
+}
+function rememberLine(id, mk) {
+  store.mkt = store.mkt || {};
+  var old = store.mkt[id];
+  if (!old || old.total !== mk.total || old.spread !== mk.spread) { store.mkt[id] = { total: mk.total, spread: mk.spread, t: Date.now() }; saveStore(); }
+}
+function pruneStore() {
+  var cut = Date.now() - 14 * 864e5;
+  Object.keys(store.mkt || {}).forEach(function (k) { if ((store.mkt[k].t || 0) < cut) delete store.mkt[k]; });
 }
 function saveStore() { try { localStorage.setItem('mbkb.v1', JSON.stringify(store)); } catch (e) {} }
 function source() { try { return localStorage.getItem('mbkb.src') || SRC; } catch (e) { return SRC; } }
@@ -18,7 +27,7 @@ function ymd(d) { return d.getFullYear() + String(d.getMonth() + 1).padStart(2, 
 function isToday(d) { return ymd(d) === ymd(new Date()); }
 function num(x) { var v = parseFloat(x); return isFinite(v) ? v : null; }
 function f1(x) { return x == null ? '–' : x.toFixed(1); }
-function pct(x) { return Math.round(x * 100) + '%'; }
+function pct(x) { return x > 0.995 ? '>99%' : x < 0.005 ? '<1%' : Math.round(x * 100) + '%'; }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
 // ---------------------------------------------------------------- feed parsing
@@ -35,6 +44,13 @@ function parseSpread(details, home, away) {
   if (ak.indexOf(who) >= 0) return -v;
   return null;
 }
+function oddsOf(o, home, away) {
+  // ESPN odds object -> {total, spread (home team's, negative when home is favored)}. null if it has neither.
+  if (!o) return null;
+  var total = num(o.overUnder), spread = num(o.spread);
+  if (spread == null) spread = parseSpread(o.details, home, away);
+  return total == null && spread == null ? null : { total: total, spread: spread };
+}
 function parseEvent(ev) {
   var c = (ev.competitions || [])[0]; if (!c) return null;
   var side = function (ha) {
@@ -45,11 +61,13 @@ function parseEvent(ev) {
   };
   var home = side('home'), away = side('away'); if (!home || !away) return null;
   var st = ev.status || c.status || {}, ty = st.type || {};
-  var odds = (c.odds || [])[0] || {};
+  var mk = oddsOf((c.odds || [])[0], home, away);
+  if (mk) rememberLine(String(ev.id), mk);  // the feed drops lines at tip-off, so keep the pregame one
+  else mk = (store.mkt || {})[String(ev.id)] || null;
   return {
     id: String(ev.id), start: new Date(ev.date), state: ty.state || 'pre', period: st.period || 0, clock: num(st.clock) || 0,
     detail: ty.shortDetail || ty.detail || '', halftime: ty.name === 'STATUS_HALFTIME', neutral: !!c.neutralSite,
-    home: home, away: away, mktTotal: num(odds.overUnder), mktSpread: parseSpread(odds.details, home, away)
+    home: home, away: away, mktTotal: mk ? num(mk.total) : null, mktSpread: mk ? num(mk.spread) : null
   };
 }
 
@@ -82,7 +100,7 @@ function teamRow(t, lead) {
   return '<div class="team' + (lead ? ' lead' : '') + '">' + (t.rank ? '<span class="rk">' + t.rank + '</span>' : '') +
     '<span class="nm">' + esc(t.name) + '</span><span class="sc">' + (t.scoreShown ? t.score : '') + '</span></div>';
 }
-function cell(k, v) { return '<div><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; }
+function cell(k, v, cls) { return '<div><div class="k">' + k + '</div><div class="v' + (cls ? ' ' + cls : '') + '">' + v + '</div></div>'; }
 function card(g) {
   var s = settings(g), live = g.state === 'in', show = g.state !== 'pre';
   g.home.scoreShown = g.away.scoreShown = show;
@@ -99,7 +117,7 @@ function card(g) {
     if (w) {
       var hp = w.pHome, fav = hp >= 0.5 ? g.home : g.away;
       cells.push(cell('Win', esc(fav.abbr || fav.name) + ' ' + pct(Math.max(hp, 1 - hp))));
-      cells.push(cell('Proj. final', esc(g.away.abbr || '') + ' ' + Math.round(w.awayPts) + ' – ' + Math.round(w.homePts) + ' ' + esc(g.home.abbr || '')));
+      cells.push(cell('Proj. final', esc(g.away.abbr || '') + ' ' + Math.round(w.awayPts) + ' – ' + Math.round(w.homePts) + ' ' + esc(g.home.abbr || ''), 'fit'));
     }
   } else if (g.state === 'pre') {
     var pg = s.pg;
@@ -149,10 +167,25 @@ function load() {
   }).then(function (j) {
     games = (j.events || []).map(parseEvent).filter(Boolean);
     lastOk = new Date(); $('banner').hidden = true;
+    fillMissingLines();
   }).catch(function (e) {
     $('banner').hidden = false;
     $('banner').textContent = 'Could not load live scores (' + e.message + '). If this keeps happening, the score feed is blocking the app and needs the relay.';
   }).then(function () { loading = false; render(); schedule(); });
+}
+var asked = {};
+function fillMissingLines() {
+  // Games already underway lost their line in the scoreboard: look it up once from ESPN's game summary.
+  var need = games.filter(function (g) { return g.state !== 'pre' && g.mktTotal == null && !asked[g.id]; }).slice(0, 12);
+  if (!need.length) return;
+  var base = source().replace(/scoreboard(\?.*)?$/, 'summary');
+  Promise.all(need.map(function (g) {
+    asked[g.id] = 1;
+    return fetch(base + '?event=' + g.id).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      var mk = j && oddsOf((j.pickcenter || [])[0], g.home, g.away);
+      if (mk) { rememberLine(g.id, mk); g.mktTotal = num(mk.total); g.mktSpread = num(mk.spread); }
+    }).catch(function () {});
+  })).then(render);
 }
 function schedule() {
   clearTimeout(timer);
