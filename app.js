@@ -6,6 +6,7 @@ var SRC = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college
 var POLL_MS = 30000;
 
 var P = null, games = [], filter = 'all', query = '', day = new Date(), timer = null, lastOk = null, loading = false;
+var modelPushed = null;  // when the app last received a new model file (server Last-Modified)
 var store = loadStore(); pruneStore();
 
 function $(id) { return document.getElementById(id); }
@@ -148,6 +149,28 @@ function visible() {
     return (store.star[b.id] ? 1 : 0) - (store.star[a.id] ? 1 : 0) || o[a.state] - o[b.state] || a.start - b.start;
   });
 }
+function dayName(d) {
+  var t = new Date(), midnight = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  var days = Math.round((midnight - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  if (days === 0) return 'today'; if (days === 1) return 'yesterday';
+  if (days < 7) return days + ' days ago';
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+function parseBuilt() {
+  if (!P) return null;
+  if (P.built) { var d = new Date(P.built); if (!isNaN(d)) return d; }
+  var m = /(\d{4})(\d{2})(\d{2})/.exec(P.version || '');   // older models: date is in the version
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+function modelLines() {
+  if (!P) return ['Model not loaded', true];
+  var built = parseBuilt(), bits = [];
+  bits.push('Model ' + (built ? 'built ' + dayName(built) : P.version));
+  if (P.games_through) bits.push('games through ' + dayName(new Date(P.games_through + 'T12:00:00')));
+  if (modelPushed) bits.push('received ' + dayName(modelPushed));
+  var age = built ? (Date.now() - built) / 864e5 : 0;
+  return [bits.join(' · '), age > 2];
+}
 function render() {
   $('dayLbl').textContent = isToday(day) ? 'Today' : day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   var v = visible();
@@ -155,7 +178,9 @@ function render() {
   var nLive = games.filter(function (g) { return g.state === 'in'; }).length;
   $('status').textContent = games.length + ' games' + (nLive ? ' · ' + nLive + ' live' : '') +
     (lastOk ? ' · updated ' + lastOk.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '');
-  $('foot').textContent = P ? 'Model ' + P.version + ' · projections are estimates, not guarantees' : '';
+  var ml = modelLines();
+  $('foot').innerHTML = '<span class="' + (ml[1] ? 'stale' : '') + '">' + esc(ml[0]) + '</span>' +
+    '<br>Projections are estimates, not guarantees.' + (ml[1] ? ' This model may be out of date.' : '');
 }
 
 // ---------------------------------------------------------------- data
@@ -193,7 +218,10 @@ function schedule() {
   if (document.visibilityState === 'visible' && isToday(day) && soon) timer = setTimeout(load, POLL_MS);
 }
 function loadParams() {
-  return fetch('params.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).then(function (j) { P = j; })
+  return fetch('params.json', { cache: 'no-cache' }).then(function (r) {
+    var lm = r.headers.get('last-modified'); if (lm && !isNaN(new Date(lm))) modelPushed = new Date(lm);
+    return r.json();
+  }).then(function (j) { P = j; })
     .catch(function () { $('banner').hidden = false; $('banner').textContent = 'Could not load the model. Projections are unavailable.'; });
 }
 
