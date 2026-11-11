@@ -8,6 +8,8 @@ Phone web app for live men's college basketball projections from the MBKB model.
   `MBKB/pipeline/work/out/params.json`.
 - **Pregame numbers:** your own line or spread for a game if you entered one, otherwise the market line (DraftKings via ESPN;
   remembered from before tip-off, or looked up once from the game summary), otherwise the model's pregame projection.
+- **Model pregame line:** live and finished games also show the model's own pregame total and spread, so you can see how
+  far the live projection has moved. Omitted when a team has no rating (a non-Division I opponent).
 - **Freshness:** the footer shows when the model was built, the last date of games in it, and when the app received the
   file (the server's Last-Modified). Older than two days, it turns red and says the model may be out of date.
 - **Install on iPhone:** open the site in Safari, tap Share, then Add to Home Screen.

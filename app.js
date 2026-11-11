@@ -101,6 +101,15 @@ function teamRow(t, lead) {
   return '<div class="team' + (lead ? ' lead' : '') + '">' + (t.rank ? '<span class="rk">' + t.rank + '</span>' : '') +
     '<span class="nm">' + esc(t.name) + '</span><span class="sc">' + (t.scoreShown ? t.score : '') + '</span></div>';
 }
+function spreadText(g, margin) {
+  var fav = margin >= 0 ? g.home : g.away;
+  return esc(fav.abbr || fav.name) + ' -' + Math.abs(margin).toFixed(1);
+}
+function pregameLine(g) {
+  // The model's own pregame numbers, kept visible once a game is under way.
+  var pg = pregameFor(g); if (!pg) return '';
+  return '<div class="pre">Model pregame: <b>' + f1(pg.total) + '</b> · <b>' + spreadText(g, pg.margin) + '</b></div>';
+}
 function cell(k, v, cls) { return '<div><div class="k">' + k + '</div><div class="v' + (cls ? ' ' + cls : '') + '">' + v + '</div></div>'; }
 function card(g) {
   var s = settings(g), live = g.state === 'in', show = g.state !== 'pre';
@@ -126,7 +135,7 @@ function card(g) {
     cells.push(cell('Market', g.mktTotal != null ? f1(g.mktTotal) : '<small>none yet</small>'));
     if (pg) {
       var fv = pg.margin >= 0 ? g.home : g.away;
-      cells.push(cell('Model spread', esc(fv.abbr || fv.name) + ' -' + Math.abs(pg.margin).toFixed(1)));
+      cells.push(cell('Model spread', spreadText(g, pg.margin)));
       cells.push(cell('Win', esc(fv.abbr || fv.name) + ' ' + pct(Math.max(pg.pHome, 1 - pg.pHome))));
     }
   } else if (g.state === 'post') {
@@ -135,6 +144,7 @@ function card(g) {
     if (s.line != null) cells.push(cell('vs ' + s.line, tot > s.line ? '<span class="over">Over</span>' : tot < s.line ? '<span class="under">Under</span>' : 'Push'));
   }
   if (cells.length) h += '<div class="proj">' + cells.join('') + '</div>';
+  if (g.state !== 'pre') h += pregameLine(g);
   return h + '</div>';
 }
 function visible() {
