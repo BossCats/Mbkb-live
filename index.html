@@ -78,6 +78,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .actions .pri{background:var(--accent);color:var(--accent-ink);font-weight:600}
 footer{font-size:12px;color:var(--muted);text-align:center;padding:16px}
 footer .stale{color:var(--live);font-weight:600}
+.flash{margin:8px 16px;padding:9px 12px;border-radius:10px;background:var(--chip);font-size:13px;text-align:center}
+button[disabled]{opacity:.6}
 </style>
 </head>
 <body>
@@ -101,6 +103,7 @@ footer .stale{color:var(--live);font-weight:600}
   <input class="search" id="search" type="search" placeholder="Find a team" autocomplete="off">
 </header>
 <div id="banner" class="banner" hidden></div>
+<div id="flash" class="flash" hidden></div>
 <div class="status" id="status">Loading…</div>
 <main id="list"></main>
 <footer id="foot"></footer>

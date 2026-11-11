@@ -181,6 +181,11 @@ function modelLines() {
   var age = built ? (Date.now() - built) / 864e5 : 0;
   return [bits.join(' · '), age > 2];
 }
+var flashTimer = null;
+function flash(msg) {
+  var el = $('flash'); el.textContent = msg; el.hidden = false;
+  clearTimeout(flashTimer); flashTimer = setTimeout(function () { el.hidden = true; }, 4000);
+}
 function render() {
   $('dayLbl').textContent = isToday(day) ? 'Today' : day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   var v = visible();
@@ -196,7 +201,7 @@ function render() {
 // ---------------------------------------------------------------- data
 function load() {
   loading = true; render();
-  var url = source() + (source().indexOf('?') >= 0 ? '&' : '?') + 'dates=' + ymd(day) + '&groups=50&limit=400';
+  var url = source() + (source().indexOf('?') >= 0 ? '&' : '?') + 'dates=' + ymd(day) + '&groups=50&limit=400&_=' + Date.now();
   return fetch(url, { cache: 'no-store' }).then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status); return r.json();
   }).then(function (j) {
@@ -228,7 +233,7 @@ function schedule() {
   if (document.visibilityState === 'visible' && isToday(day) && soon) timer = setTimeout(load, POLL_MS);
 }
 function loadParams() {
-  return fetch('params.json', { cache: 'no-cache' }).then(function (r) {
+  return fetch('params.json?_=' + Date.now(), { cache: 'no-store' }).then(function (r) {
     var lm = r.headers.get('last-modified'); if (lm && !isNaN(new Date(lm))) modelPushed = new Date(lm);
     return r.json();
   }).then(function (j) { P = j; })
@@ -278,7 +283,15 @@ $('filters').addEventListener('click', function (e) {
   render();
 });
 $('search').addEventListener('input', function () { query = this.value; render(); });
-$('refresh').addEventListener('click', load);
+$('refresh').addEventListener('click', function () {
+  var b = $('refresh'), was = b.textContent;
+  b.textContent = 'Updating…'; b.disabled = true;
+  var before = P && P.version;
+  loadParams().then(load).then(function () {
+    b.textContent = was; b.disabled = false;
+    if (P && P.version !== before) flash('Updated to model ' + P.version);
+  }).catch(function () { b.textContent = was; b.disabled = false; });
+});
 $('prev').addEventListener('click', function () { day = new Date(day.getTime() - 864e5); games = []; load(); });
 $('next').addEventListener('click', function () { day = new Date(day.getTime() + 864e5); games = []; load(); });
 document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') load(); else clearTimeout(timer); });
