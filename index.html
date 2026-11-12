@@ -24,8 +24,9 @@
 }}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
-body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 16px)}
-header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 16px 8px;border-bottom:1px solid var(--line)}
+body{padding:0 0 calc(env(safe-area-inset-bottom) + 16px)}
+/* The sticky header, not the body, reserves the status-bar strip, so it stays clear while scrolling. */
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top) + 10px) 16px 8px;border-bottom:1px solid var(--line)}
 .top{display:flex;align-items:center;gap:8px}
 .top h1{font-size:19px;margin:0;flex:1;letter-spacing:-.2px}
 .top h1 span{color:var(--accent)}
