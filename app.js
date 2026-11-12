@@ -192,7 +192,7 @@ function render() {
   $('list').innerHTML = v.length ? v.map(card).join('') : '<div class="empty">' + (loading ? 'Loading games…' : 'No games here.') + '</div>';
   var nLive = games.filter(function (g) { return g.state === 'in'; }).length;
   $('status').textContent = games.length + ' games' + (nLive ? ' · ' + nLive + ' live' : '') +
-    (lastOk ? ' · updated ' + lastOk.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '');
+    (lastOk ? ' · scores updated ' + lastOk.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
   var ml = modelLines();
   $('foot').innerHTML = '<span class="' + (ml[1] ? 'stale' : '') + '">' + esc(ml[0]) + '</span>' +
     '<br>Projections are estimates, not guarantees.' + (ml[1] ? ' This model may be out of date.' : '');
