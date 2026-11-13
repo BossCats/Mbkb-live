@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache">
 <title>MBKB Live</title>
 <meta name="description" content="Live college basketball total and spread projections">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -111,7 +112,15 @@ button[disabled]{opacity:.6}
 
 <dialog id="dlg"><form method="dialog" class="sheet" id="sheet"></form></dialog>
 
-<script src="core.js"></script>
-<script src="app.js"></script>
+<script>
+// Load the model code and the app with a per-load marker: iOS keeps serving a cached app.js otherwise, so an
+// update would not reach a Home Screen app until its cache expired. async=false keeps them in order.
+(function () {
+  var v = Date.now();
+  ['core.js', 'app.js'].forEach(function (f) {
+    var s = document.createElement('script'); s.src = f + '?v=' + v; s.async = false; document.head.appendChild(s);
+  });
+})();
+</script>
 </body>
 </html>

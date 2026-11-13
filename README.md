@@ -14,6 +14,8 @@ Phone web app for live men's college basketball projections from the MBKB model.
   far the live projection has moved. When a team has no rating (a non-Division I opponent) the card says so instead.
 - **Freshness:** the footer shows when the model was built, the last date of games in it, and when the app received the
   file (the server's Last-Modified). Older than two days, it turns red and says the model may be out of date.
+- **Updates:** index.html loads core.js and app.js with a per-load marker, so a Home Screen app picks up new code on
+  reopen instead of serving iOS's cached copy. A phone that cached the old index.html needs one reload in Safari first.
 - **Install on iPhone:** open the site in Safari, tap Share, then Add to Home Screen.
 
 Projections are estimates, not guarantees.
