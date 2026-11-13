@@ -105,10 +105,19 @@ function spreadText(g, margin) {
   var fav = margin >= 0 ? g.home : g.away;
   return esc(fav.abbr || fav.name) + ' -' + Math.abs(margin).toFixed(1);
 }
+function rated(id) {
+  var G = P && P.pregame; if (!G) return false;
+  for (var i = 0; i < G.teams.length; i++) if (G.teams[i][0] === id) return true;
+  return false;
+}
 function pregameLine(g) {
   // The model's own pregame numbers, kept visible once a game is under way.
-  var pg = pregameFor(g); if (!pg) return '';
-  return '<div class="pre">Model pregame: <b>' + f1(pg.total) + '</b> · <b>' + spreadText(g, pg.margin) + '</b></div>';
+  if (!P || !P.pregame) return '';
+  var pg = pregameFor(g);
+  if (pg) return '<div class="pre">Model pregame: <b>' + f1(pg.total) + '</b> · <b>' + spreadText(g, pg.margin) + '</b></div>';
+  var un = [g.away, g.home].filter(function (t) { return !rated(t.id); }).map(function (t) { return t.name; });
+  if (un.length) return '<div class="pre">No model pregame — ' + esc(un.join(' and ')) + ' not in Division I</div>';
+  return '';
 }
 function cell(k, v, cls) { return '<div><div class="k">' + k + '</div><div class="v' + (cls ? ' ' + cls : '') + '">' + v + '</div></div>'; }
 function card(g) {
