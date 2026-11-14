@@ -156,11 +156,12 @@ function card(g) {
   if (g.state !== 'pre') h += pregameLine(g);
   return h + '</div>';
 }
+var FILTER_STATE = { live: 'in', pre: 'pre', post: 'post' };  // the feed calls a game in progress "in"
 function visible() {
-  var q = query.trim().toLowerCase();
+  var q = query.trim().toLowerCase(), want = FILTER_STATE[filter];
   return games.filter(function (g) {
     if (filter === 'star' && !store.star[g.id]) return false;
-    if (filter !== 'all' && filter !== 'star' && g.state !== filter) return false;
+    if (want && g.state !== want) return false;
     if (q && (g.home.name + ' ' + g.away.name + ' ' + (g.home.abbr || '') + ' ' + (g.away.abbr || '')).toLowerCase().indexOf(q) < 0) return false;
     return true;
   }).sort(function (a, b) {
