@@ -182,6 +182,21 @@ function parseBuilt() {
   var m = /(\d{4})(\d{2})(\d{2})/.exec(P.version || '');   // older models: date is in the version
   return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
 }
+function daysOld(d) {
+  var t = new Date(), midnight = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  return Math.round((midnight - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+}
+function staleWarning() {
+  // The model is rebuilt every morning at 8. Two days old means a run was missed; one day old past mid-morning
+  // means today's run has not happened yet.
+  if (!P) return null;
+  var built = parseBuilt(); if (!built) return null;
+  var n = daysOld(built), hour = new Date().getHours();
+  var day = built.toLocaleDateString([], { weekday: 'long' });
+  if (n >= 2) return { level: 'bad', text: 'Model has not updated since ' + day + ' (' + n + ' days old). The daily run is not happening.' };
+  if (n === 1 && hour >= 10) return { level: 'warn', text: "Today's model update has not run. Showing yesterday's ratings." };
+  return null;
+}
 function modelLines() {
   if (!P) return ['Model not loaded', true];
   var built = parseBuilt(), bits = [];
@@ -197,6 +212,9 @@ function flash(msg) {
   clearTimeout(flashTimer); flashTimer = setTimeout(function () { el.hidden = true; }, 4000);
 }
 function render() {
+  var w = staleWarning(), el = $('stale');
+  el.hidden = !w;
+  if (w) { el.textContent = w.text; el.className = 'stale-banner ' + w.level; }
   $('dayLbl').textContent = isToday(day) ? 'Today' : day.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   var v = visible();
   $('list').innerHTML = v.length ? v.map(card).join('') : '<div class="empty">' + (loading ? 'Loading games…' : 'No games here.') + '</div>';

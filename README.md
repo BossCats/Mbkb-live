@@ -12,6 +12,8 @@ Phone web app for live men's college basketball projections from the MBKB model.
   cache-buster so a CDN copy cannot be served back. It does not update the app's own code; that needs a page reload.
 - **Model pregame line:** live and finished games also show the model's own pregame total and spread, so you can see how
   far the live projection has moved. When a team has no rating (a non-Division I opponent) the card says so instead.
+- **Stale alert:** a banner at the top of the list when the model is behind — amber once today's 8 am run has not
+  happened by 10 am, red when the model is two or more days old. Driven by the model's own build date.
 - **Freshness:** the footer shows when the model was built, the last date of games in it, and when the app received the
   file (the server's Last-Modified). Older than two days, it turns red and says the model may be out of date.
 - **Updates:** index.html loads core.js and app.js with a per-load marker, so a Home Screen app picks up new code on
