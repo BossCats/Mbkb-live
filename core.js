@@ -128,7 +128,9 @@ function pregame(P, homeId, awayId, neutral) {
   var h = row(homeId), a = row(awayId); if (!h || !a || homeId === awayId) return null;
   var poss = G.tau + h[4] + a[4];
   var raw = (2 * G.mu + h[2] - a[3] + a[2] - h[3]) * poss / 100;
-  var total = G.cal_a + G.cal_b * raw;
+  // cal_n: neutral-site games score a little less than the ratings expect (see neutral_report.md). The pipeline
+  // publishes the value for today's part of the season; older parameter files have none, which means zero.
+  var total = G.cal_a + G.cal_b * raw + (neutral ? (G.cal_n || 0) : 0);
   var possM = G.tau_m + h[7] + a[7];
   var marginN = (h[5] - a[6] - a[5] + h[6]) * possM / 100;
   var margin = G.beta * marginN + (neutral ? 0 : G.hca);
