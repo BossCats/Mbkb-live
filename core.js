@@ -38,6 +38,21 @@ function normCdf(z) {  // Abramowitz-Stegun 7.1.26 on erf; absolute error below 
   return z >= 0 ? 0.5 * (1 + e) : 0.5 * (1 - e);
 }
 function interpCol(xs, rows, col, x) { return interp(xs, rows.map(function (r) { return r[col]; }), x); }
+// Both of these widen or narrow an otherwise-flat uncertainty band: the (time left, |margin|) table treats every
+// matchup the same regardless of how high its projected total is or how many games the two teams have played this
+// season, which the model's own backtest says it shouldn't (see variance_report.md and tempo_report.md). Each
+// returns a multiplier that is 1.0 for a typical game, before the shared lo/hi clip.
+function totalScale(P, prior) {
+  var ts = P.total_scale; if (!ts) return 1;
+  var base = ts.a + ts.b * ts.mean, cur = ts.a + ts.b * prior;
+  return Math.min(ts.hi, Math.max(ts.lo, cur / Math.max(base, 1e-6)));
+}
+function gamesScale(ns, lo, hi, nmin) {
+  if (!ns) return 1;
+  var x = Math.min(nmin, ns.cap);
+  var base = ns.floor + ns.extra / (ns.mean + 1), cur = ns.floor + ns.extra / (x + 1);
+  return Math.min(hi, Math.max(lo, cur / Math.max(base, 1e-6)));
+}
 function probitAt(nodes, pc, x) {
   // Interpolate probit coefficients on the scale where uncertainty changes smoothly: 1/a^2 and b/a.
   var v = interp(nodes, pc.map(function (r) { return 1 / (r[0] * r[0]); }), x);
@@ -88,6 +103,7 @@ function project(P, inp) {
     lk = lookup(T.tables[mode], T.left_nodes, T.am_nodes, leftGame, am, nq);
     var even = lookup(T.tables[mode], T.left_nodes, T.am_nodes, leftGame, 0, nq);
     proj = base + lk.m; q = lk.q;
+    if (mode === 'B') { var tsc = totalScale(P, prior); q = q.map(function (v) { return v * tsc; }); }
     res = { mode: mode, elapsed: el, share: f, prior: prior, marginEffect: lk.m - even.m, usesMargin: true };
   }
   var at = function (lv) { return q[P.q_levels.indexOf(lv)]; };
@@ -116,9 +132,16 @@ function pregame(P, homeId, awayId, neutral) {
   var possM = G.tau_m + h[7] + a[7];
   var marginN = (h[5] - a[6] - a[5] + h[6]) * possM / 100;
   var margin = G.beta * marginN + (neutral ? 0 : G.hca);
+  // Games each team has played this season (0 before its opener): the fewer games either side has played, the
+  // less trustworthy the matchup-specific total/margin above is, so the pregame bands widen for it -- see
+  // tempo_report.md. The win-probability pHome above is left on the flat sd_margin, matching the existing fit_wp
+  // model and its own tests; only the displayed bands (sdTotal, sdMargin, pOver) widen or narrow.
+  var NS = P.nmin_scale, nmin = Math.min(h[8], a[8]);
+  var gTot = NS ? gamesScale(NS.total, NS.lo, NS.hi, nmin) : 1, gMar = NS ? gamesScale(NS.margin, NS.lo, NS.hi, nmin) : 1;
+  var sdTotal = G.sd_total * totalScale(P, total) * gTot, sdMargin = G.sd_margin * gMar;
   return { home: h[1], away: a[1], total: total, margin: margin, spread: -margin, possessions: poss,
            homePts: (total + margin) / 2, awayPts: (total - margin) / 2, pHome: normCdf(margin / G.sd_margin),
-           sdTotal: G.sd_total, sdMargin: G.sd_margin,
-           pOver: function (line) { return 1 - normCdf((line - total) / G.sd_total); } };
+           sdTotal: sdTotal, sdMargin: sdMargin,
+           pOver: function (line) { return 1 - normCdf((line - total) / sdTotal); } };
 }
 if (typeof module !== 'undefined') module.exports = { project: project, pregame: pregame, elapsedMinutes: elapsedMinutes, shareDone: shareDone };
